@@ -113,20 +113,39 @@ jobs:
           mv ./flutter/build/windows/x64/runner/Release ./niquehelper
           Get-ChildItem ./niquehelper | Format-Table Name, Length
 
+      - name: Copy the version resource for the packer
+        shell: bash
+        run: |
+          runner_res=$(find . -name "Runner.res")
+          test -n "$runner_res"
+          cp "$runner_res" ./libs/portable/Runner.res
+
+      - name: Pack into one self-extracting program
+        shell: bash
+        run: |
+          sed -i '/dpiAware/d' res/manifest.xml
+          pushd ./libs/portable
+          pip3 install -r requirements.txt
+          python3 ./generate.py -f ../../niquehelper/ -o . -e ../../niquehelper/niquehelper.exe
+          popd
+          mkdir -p ./out
+          mv ./target/release/niquehelper.exe ./out/niquehelper.exe
+          ls -l ./out
+
       - name: Prove no RustDesk name ships
         shell: bash
         run: |
           set -e
-          ls niquehelper
           test -f niquehelper/niquehelper.exe
           test -f niquehelper/libniquehelper.dll
           if ls niquehelper | grep -qi rustdesk; then
-            echo "::error::a file in the output still carries the RustDesk name"; exit 1
+            echo "::error::a file in the unpacked folder still carries the RustDesk name"; exit 1
           fi
+          sha256sum out/niquehelper.exe
 
-      - name: Upload the client folder
+      - name: Upload the single program
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: niquehelper-windows-x64
-          path: niquehelper
+          path: out/niquehelper.exe
           if-no-files-found: error
