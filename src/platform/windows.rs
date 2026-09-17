@@ -536,6 +536,29 @@ pub fn start_os_service() {
     }
 }
 
+// Nique build: our own helper service runs this client as a CHILD PROCESS rather
+// than registering a second Windows service for it (OD-42 §29 — two services on
+// the box, both Nique-named). `--service` cannot serve that: it calls
+// service_dispatcher::start, which only succeeds when the Service Control
+// Manager launched the process. This runs the SAME run_service loop — launching
+// the server into the active session, the IPC listener, the session-change
+// watch — with only the SCM status plumbing skipped. The parent service owns the
+// lifetime: it starts this process and terminates it to stop remote support.
+pub static SERVICE_FOREGROUND: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+#[inline]
+fn service_foreground() -> bool {
+    SERVICE_FOREGROUND.load(std::sync::atomic::Ordering::SeqCst)
+}
+
+pub fn start_os_service_foreground() {
+    SERVICE_FOREGROUND.store(true, std::sync::atomic::Ordering::SeqCst);
+    if let Err(e) = run_service(Vec::new()) {
+        log::error!("run_service (foreground) failed: {}", e);
+    }
+}
+
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
 
 extern "C" {
@@ -651,7 +674,15 @@ async fn run_service(_arguments: Vec<OsString>) -> ResultType<()> {
     };
 
     // Register system service event handler
-    let status_handle = service_control_handler::register(crate::get_app_name(), event_handler)?;
+    // None when this process was NOT launched by the SCM (start_os_service_foreground).
+    let status_handle = if service_foreground() {
+        None
+    } else {
+        Some(service_control_handler::register(
+            crate::get_app_name(),
+            event_handler,
+        )?)
+    };
 
     let next_status = ServiceStatus {
         // Should match the one from system service registry
@@ -670,7 +701,9 @@ async fn run_service(_arguments: Vec<OsString>) -> ResultType<()> {
     };
 
     // Tell the system that the service is running now
-    status_handle.set_service_status(next_status)?;
+    if let Some(h) = status_handle.as_ref() {
+        h.set_service_status(next_status)?;
+    }
 
     let mut session_id = unsafe { get_current_session(share_rdp()) };
     log::info!("session id {}", session_id);
@@ -779,15 +812,17 @@ async fn run_service(_arguments: Vec<OsString>) -> ResultType<()> {
         unsafe { CloseHandle(h_process) };
     }
 
-    status_handle.set_service_status(ServiceStatus {
-        service_type: SERVICE_TYPE,
-        current_state: ServiceState::Stopped,
-        controls_accepted: ServiceControlAccept::empty(),
-        exit_code: ServiceExitCode::Win32(0),
-        checkpoint: 0,
-        wait_hint: Duration::default(),
-        process_id: None,
-    })?;
+    if let Some(h) = status_handle.as_ref() {
+        h.set_service_status(ServiceStatus {
+            service_type: SERVICE_TYPE,
+            current_state: ServiceState::Stopped,
+            controls_accepted: ServiceControlAccept::empty(),
+            exit_code: ServiceExitCode::Win32(0),
+            checkpoint: 0,
+            wait_hint: Duration::default(),
+            process_id: None,
+        })?;
+    }
 
     Ok(())
 }

@@ -389,6 +389,13 @@ pub fn core_main() -> Option<Vec<String>> {
             log::info!("start --service");
             crate::start_os_service();
             return None;
+        } else if args[0] == "--service-foreground" {
+            // Nique build: run the service loop as a child of our helper service
+            // (no SCM registration). See platform::windows::start_os_service_foreground.
+            log::info!("start --service-foreground");
+            #[cfg(windows)]
+            crate::platform::windows::start_os_service_foreground();
+            return None;
         } else if args[0] == "--server" {
             log::info!("start --server with user {}", crate::username());
             #[cfg(target_os = "linux")]
