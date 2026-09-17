@@ -2355,9 +2355,10 @@ pub fn main_get_new_version() -> SyncReturn<String> {
 }
 
 pub fn main_update_me() -> SyncReturn<bool> {
-    update_me("".to_owned());
-    SyncReturn(true)
+    // Nique build: self-update is disabled; the hub installer delivers new versions.
+    SyncReturn(false)
 }
+
 
 pub fn set_cur_session_id(session_id: SessionID) {
     if let Some(session) = sessions::get_session_by_session_id(&session_id) {
