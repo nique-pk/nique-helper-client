@@ -129,7 +129,7 @@ jobs:
           python3 ./generate.py -f ../../niquehelper/ -o . -e ../../niquehelper/niquehelper.exe
           popd
           mkdir -p ./out
-          mv ./target/release/niquehelper.exe ./out/niquehelper.exe
+          mv ./target/release/niquehelper-packer.exe ./out/niquehelper.exe
           ls -l ./out
 
       - name: Prove no RustDesk name ships

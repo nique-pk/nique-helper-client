@@ -160,7 +160,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "niquehelper"
+name = "niquehelper-packer"
 version = "1.4.9"
 dependencies = [
  "brotli",

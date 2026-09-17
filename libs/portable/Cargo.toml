@@ -1,5 +1,5 @@
 [package]
-name = "niquehelper"
+name = "niquehelper-packer"
 version = "1.4.9"
 edition = "2021"
 description = "Nique POS Helper"
