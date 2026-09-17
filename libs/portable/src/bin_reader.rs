@@ -55,12 +55,15 @@ impl BinaryData {
             let digest = format!("{:x}", md5::compute(&f));
             let md5_record = String::from_utf8_lossy(self.md5_code);
             if digest == md5_record {
-                // same, skip this file
-                println!("skip {}", &self.path);
+                // same, skip this file. Nique build: this is unpack HOUSEKEEPING,
+                // not the wrapped client's own output — it must never share
+                // stdout with the real client (support-setup parses --get-id's
+                // stdout and expects nothing but the id).
+                eprintln!("skip {}", &self.path);
                 return;
             } else {
-                println!("writing {}", p.display());
-                println!("{} -> {}", md5_record, digest)
+                eprintln!("writing {}", p.display());
+                eprintln!("{} -> {}", md5_record, digest)
             }
         }
         let _ = fs::write(p, self.decompress());
