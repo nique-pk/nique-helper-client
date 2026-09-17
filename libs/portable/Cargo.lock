@@ -160,7 +160,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustdesk-portable-packer"
+name = "niquehelper"
 version = "0.1.0"
 dependencies = [
  "brotli",
