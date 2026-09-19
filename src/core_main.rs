@@ -446,14 +446,19 @@ pub fn core_main() -> Option<Vec<String>> {
                 return None;
             }
             if args.len() == 2 {
-                if crate::platform::is_installed() && is_root() {
+                // Nique: this build is never "installed" in the registry sense
+                // (it runs from the hub folder as a child of poshub-support), so
+                // only elevation gates the change. The IPC call still needs the
+                // service loop running, which is exactly when poshub-support
+                // calls this; it reads "Done!" on stdout as the only success.
+                if is_root() {
                     if let Err(err) = crate::ipc::set_permanent_password(args[1].to_owned()) {
                         println!("{err}");
                     } else {
                         println!("Done!");
                     }
                 } else {
-                    println!("Installation and administrative privileges required!");
+                    println!("Administrative privileges required!");
                 }
             }
             return None;
